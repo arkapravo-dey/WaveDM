@@ -103,7 +103,7 @@ class TVLoss(nn.Module):
         
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='epoch to start training from')
-parser.add_argument('--n_epochs', type=int, default= 50, help='number of epochs of training')
+parser.add_argument('--n_epochs', type=int, default= 5, help='number of epochs of training')
 parser.add_argument('--dataset_name', type=str, default="raindrop", help='name of the dataset')
 parser.add_argument('--batch_size', type=int, default=2, help='size of the batches')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')      
