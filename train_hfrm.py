@@ -217,7 +217,7 @@ def sample_images(epoch , i ,real_A,real_B,fake_B):
     #pdb.set_trace()
     img = img.astype(np.uint8)
     img= Image.fromarray(img)
-    img.save("./train_result/%03d_%06d.png"%(epoch,i))
+    img.save("/kaggle/working/WaveDM/train_result/%03d_%06d.png"%(epoch,i))
     
 # ----------
 #  Training
