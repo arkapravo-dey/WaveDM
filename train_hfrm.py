@@ -266,16 +266,16 @@ try:
         print("epoch PSNR: %f, best psnr:%f" % (np.mean(epoch_psnr), best_psnr))
         if np.mean(epoch_psnr) > best_psnr:
             best_psnr = np.mean(epoch_psnr)
-            torch.save(generator.module.state_dict(), './saved_models/%s/best.pth' % opt.dataset_name)
+            torch.save(generator.module.state_dict(), '/kaggle/working/saved_models/%s/best.pth' % opt.dataset_name)
 
         # Always save latest after every epoch
-        torch.save(generator.module.state_dict(), './saved_models/%s/lastest.pth' % opt.dataset_name)
+        torch.save(generator.module.state_dict(), '/kaggle/working/saved_models/%s/lastest.pth' % opt.dataset_name)
 
         if (epoch + 1) % 20 == 0:
-            torch.save(generator.module.state_dict(), './saved_models/%s/generator_%d.pth' % (opt.dataset_name, epoch))
+            torch.save(generator.module.state_dict(), '/kaggle/working/saved_models/%s/generator_%d.pth' % (opt.dataset_name, epoch))
 
 except Exception as e:
     print(f"❌ Training crashed due to: {e}")
     # Save backup immediately on crash
-    torch.save(generator.module.state_dict(), './saved_models/%s/crash_backup_epoch_%d.pth' % (opt.dataset_name, epoch))
+    torch.save(generator.module.state_dict(), '/kaggle/working/saved_models/%s/crash_backup_epoch_%d.pth' % (opt.dataset_name, epoch))
     raise e
