@@ -84,6 +84,12 @@ class TVLoss(nn.Module):
     def _tensor_size(self,t):
         return t.size()[1]*t.size()[2]*t.size()[3]
 
+# [Your existing imports remain unchanged]
+
+# -----------------------------------------
+# Start of main script logic
+# -----------------------------------------
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0)
 parser.add_argument('--n_epochs', type=int, default=5)
@@ -146,7 +152,7 @@ mytransform = transforms.Compose([transforms.ToTensor()])
 data_root = '/kaggle/working/WaveDM/data/raindrop/train'
 myfolder = myImageFloder(root=data_root, transform=mytransform, crop=False, resize=False, crop_size=480, resize_size=480)
 dataloader = DataLoader(myfolder, num_workers=opt.n_cpu, batch_size=opt.batch_size, shuffle=True)
-print('Data loader ready.')
+print('✅ Data loader ready.')
 
 Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
@@ -179,23 +185,36 @@ try:
                 print(f"Epoch {epoch} Batch {i} - G loss: {loss_G.item():.4f}, Pixel Loss: {loss_pixel.item():.4f}")
 
         epoch_avg_psnr = np.mean(epoch_psnr)
-        print(f"Epoch {epoch} PSNR: {epoch_avg_psnr:.4f}, Best so far: {best_psnr:.4f}")
+        print(f"📈 Epoch {epoch} PSNR: {epoch_avg_psnr:.4f} | Best so far: {best_psnr:.4f}")
 
-        last_model_path = os.path.join(save_dir, 'lastest.pth')
+        # === Save Paths ===
         epoch_model_path = os.path.join(save_dir, f'epoch_{epoch}.pth')
-        torch.save(generator.module.state_dict(), last_model_path)
-        torch.save(generator.module.state_dict(), epoch_model_path)
+        latest_model_path = os.path.join(save_dir, 'latest.pth')
+        best_model_path = os.path.join(save_dir, 'best.pth')
 
+        # === Save models ===
+        torch.save(generator.module.state_dict(), epoch_model_path)
+        torch.save(generator.module.state_dict(), latest_model_path)
+        print(f"✅ Saved model: {epoch_model_path}")
+        print(f"✅ Saved latest model: {latest_model_path}")
+
+        # Save best model
         if epoch_avg_psnr > best_psnr:
             best_psnr = epoch_avg_psnr
-            best_model_path = os.path.join(save_dir, 'best.pth')
             torch.save(generator.module.state_dict(), best_model_path)
+            print(f"🏆 New best model saved: {best_model_path}")
 
-        shutil.copy(last_model_path, '/kaggle/working/lastest.pth')
+        # Also copy to working directory for export
         shutil.copy(epoch_model_path, f'/kaggle/working/epoch_{epoch}.pth')
-        shutil.copy(os.path.join(save_dir, 'best.pth'), '/kaggle/working/best.pth')
+        shutil.copy(latest_model_path, '/kaggle/working/latest.pth')
+        shutil.copy(best_model_path, '/kaggle/working/best.pth')
+
+        # List saved files
+        print("📁 Saved models in /kaggle/working/:", os.listdir('/kaggle/working/'))
 
 except Exception as e:
-    print(f"Training crashed: {e}")
-    torch.save(generator.module.state_dict(), f'{save_dir}/crash_epoch_{epoch}.pth')
+    print(f"❌ Training crashed due to: {e}")
+    crash_path = f'{save_dir}/crash_epoch_{epoch}.pth'
+    torch.save(generator.module.state_dict(), crash_path)
+    print(f"💾 Crash backup saved to: {crash_path}")
     raise e
