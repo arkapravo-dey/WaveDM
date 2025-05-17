@@ -109,6 +109,7 @@ print(opt)
 save_dir = f'/kaggle/working/saved_models/{opt.dataset_name}'
 os.makedirs(f'images/{opt.dataset_name}', exist_ok=True)
 os.makedirs(save_dir, exist_ok=True)
+print(f"✅ Save directory created: {save_dir}, Exists: {os.path.exists(save_dir)}")
 
 cuda = torch.cuda.is_available()
 criterion_GAN = torch.nn.MSELoss()
