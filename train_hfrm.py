@@ -126,7 +126,8 @@ opt = parser.parse_args()
 print(opt)
 
 os.makedirs('images/%s' % opt.dataset_name, exist_ok=True)
-os.makedirs('saved_models/%s' % opt.dataset_name, exist_ok=True)
+os.makedirs('/kaggle/working/saved_models/%s' % opt.dataset_name, exist_ok=True)
+
 
 cuda = True if torch.cuda.is_available() else False
 
