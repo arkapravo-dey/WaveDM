@@ -103,9 +103,9 @@ class TVLoss(nn.Module):
         
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='epoch to start training from')
-parser.add_argument('--n_epochs', type=int, default=800, help='number of epochs of training')
+parser.add_argument('--n_epochs', type=int, default= 50, help='number of epochs of training')
 parser.add_argument('--dataset_name', type=str, default="raindrop", help='name of the dataset')
-parser.add_argument('--batch_size', type=int, default=8, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=2, help='size of the batches')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')      
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
@@ -181,7 +181,7 @@ mytransform = transforms.Compose([
     ])
     
 # change the root to your own data path
-data_root = '/data1/jchuang/weather/raindrop/train'
+data_root = '/kaggle/working/WaveDM/data/raindrop/train'
 myfolder = myImageFloder(root = data_root,  transform = mytransform,crop=False,resize=False,crop_size=480,resize_size=480)
 dataloader = DataLoader(myfolder, num_workers=opt.n_cpu, batch_size=opt.batch_size, shuffle=True)
 print('data loader finish！')
@@ -226,85 +226,56 @@ EPS = 1e-12
 prev_time = time.time()
 step = 0
 best_psnr = 31
-for epoch in range(opt.epoch, opt.n_epochs):
+try:
+    for epoch in range(opt.epoch, opt.n_epochs):
 
-    epoch_psnr = []
-    for i, batch in enumerate(tqdm(dataloader), 0):
-        step = step+1
-        
-        # set lr rate
-        current_lr = 0.0002*(1/2)**(step/100000)
-        for param_group in optimizer_G.param_groups:
-            param_group["lr"] = current_lr
-            
-        # Model inputs
-        img_train = batch
-        real_A, real_B = Variable(img_train[0].cuda()), Variable(img_train[1].cuda())
-        #pdb.set_trace()
+        epoch_psnr = []
+        for i, batch in enumerate(tqdm(dataloader), 0):
+            step += 1
 
-        batch_size = real_B.size(0)
-        
-        if epoch >-1 :
+            # Adjust learning rate
+            current_lr = 0.0002 * (1 / 2) ** (step / 100000)
+            for param_group in optimizer_G.param_groups:
+                param_group["lr"] = current_lr
 
-            optimizer_G.zero_grad()
+            img_train = batch
+            real_A, real_B = Variable(img_train[0].cuda()), Variable(img_train[1].cuda())
 
-            fake_B = generator(real_A)
+            if epoch > -1:
+                optimizer_G.zero_grad()
+                fake_B = generator(real_A)
 
-            # Pixel-wise loss
-            loss_pixel = criterion_pixelwise(fake_B, real_B)   #.................................
+                # Loss computation
+                loss_pixel = criterion_pixelwise(fake_B, real_B)
+                p0 = compute_l1_loss(fake_B * 255, real_B * 255) * 2
+                loss_p = p0
+                loss_G = loss_p
+                loss_G.backward()
+                optimizer_G.step()
 
-            # preceptual loss
-            # loss_fake_B = lossnet(fake_B*255)
-            # loss_real_B = lossnet(real_B*255)
-            p0=compute_l1_loss(fake_B*255,real_B*255)*2
-            # p1=compute_l1_loss(loss_fake_B['relu1'],loss_real_B['relu1'])/2.6
-            # p2=compute_l1_loss(loss_fake_B['relu2'],loss_real_B['relu2'])/4.8
-            #p3=compute_l1_loss(loss_fake_B['relu3'],loss_real_B['relu3'])/3.7
-            #p4=compute_l1_loss(loss_fake_B['relu4'],loss_real_B['relu4'])/5.6
-            #p5=compute_l1_loss(loss_fake_B['relu5'],loss_real_B['relu5'])/5.6     #   *10/1.5  
-            loss_p = p0 #+p1+p2   #+p3+p4+p5
+                psnr = BatchPSNR(fake_B, real_B)
+                epoch_psnr.append(psnr.mean().item())
 
-            loss_G = 1*loss_p  # +  loss_tv  loss_pixel
-            
-            loss_G.backward()
+                if i % 100 == 0:
+                    print("G loss: %f", loss_G.item())
+                    sys.stdout.write("\r[Epoch %d/%d] [Batch %d/%d] [G loss: %f, pixel: %f]\n" %
+                                     (epoch, opt.n_epochs, i, len(dataloader), loss_G.item(), loss_pixel.item()))
+                if i % 1000 == 0:
+                    sample_images(epoch, i, real_A, real_B, fake_B)
 
-            optimizer_G.step()
+        print("epoch PSNR: %f, best psnr:%f" % (np.mean(epoch_psnr), best_psnr))
+        if np.mean(epoch_psnr) > best_psnr:
+            best_psnr = np.mean(epoch_psnr)
+            torch.save(generator.module.state_dict(), './saved_models/%s/best.pth' % opt.dataset_name)
 
-            psnr = BatchPSNR(fake_B,real_B)
-            epoch_psnr.append(psnr.mean().item())
-            print("PSNR this: %f", psnr.mean().item())
+        # Always save latest after every epoch
+        torch.save(generator.module.state_dict(), './saved_models/%s/lastest.pth' % opt.dataset_name)
 
-            # Determine approximate time left
-            batches_done = epoch * len(dataloader) + i
-            batches_left = opt.n_epochs * len(dataloader) - batches_done
-            time_left = datetime.timedelta(seconds=batches_left * (time.time() - prev_time))
-            prev_time = time.time()
-            
-            if i%100==0:
-                print("G loss: %f",loss_G.item())
-                sys.stdout.write("\r[Epoch %d/%d] [Batch %d/%d] [G loss: %f, pixel: %f] ETA: %s" %
-                                                        (epoch, opt.n_epochs,
-                                                        i, len(dataloader),
-                                                         loss_G.item(),
-                                                        loss_pixel.item(),
-                                                        time_left)) 
-            
-            if i % 1000==0:
-                sample_images(epoch , i ,real_A,real_B,fake_B)
-                
-                
-        else:
-            pass
+        if (epoch + 1) % 20 == 0:
+            torch.save(generator.module.state_dict(), './saved_models/%s/generator_%d.pth' % (opt.dataset_name, epoch))
 
-
-    print("epoch PSNR: %f, best psnr:%f"%(np.mean(epoch_psnr),best_psnr))
-    if np.mean(epoch_psnr) > best_psnr:
-        best_psnr = np.mean(epoch_psnr)
-        torch.save(generator.module.state_dict(), './saved_models/%s/best.pth' % opt.dataset_name)
-
-    torch.save(generator.module.state_dict(),'./saved_models/%s/lastest.pth'%opt.dataset_name)
-    if epoch+1 % 20==0:
-      torch.save(generator.module.state_dict(), './saved_models/%s/generator_%d.pth' % (opt.dataset_name, epoch))
-      
-      
-
+except Exception as e:
+    print(f"❌ Training crashed due to: {e}")
+    # Save backup immediately on crash
+    torch.save(generator.module.state_dict(), './saved_models/%s/crash_backup_epoch_%d.pth' % (opt.dataset_name, epoch))
+    raise e
