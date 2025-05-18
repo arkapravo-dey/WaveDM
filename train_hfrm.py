@@ -92,9 +92,9 @@ class TVLoss(nn.Module):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0)
-parser.add_argument('--n_epochs', type=int, default=50)
+parser.add_argument('--n_epochs', type=int, default=100)
 parser.add_argument('--dataset_name', type=str, default="raindrop")
-parser.add_argument('--batch_size', type=int, default=8)
+parser.add_argument('--batch_size', type=int, default=4)
 parser.add_argument('--lr', type=float, default=0.0002)
 parser.add_argument('--b1', type=float, default=0.5)
 parser.add_argument('--b2', type=float, default=0.999)
