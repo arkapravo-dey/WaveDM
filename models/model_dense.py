@@ -6,7 +6,7 @@ import pdb
 import math
 import numpy as np
 #from  siamese import SiameseNet
-from .sam import *
+from sam import *
 import pickle
 # import moxing as mox
 # import os
